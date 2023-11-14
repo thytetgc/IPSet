@@ -1,0 +1,4 @@
+/log info "Carregar RDS IPV4 address list"
+/ip firewall address-list remove [/ip firewall address-list find list=RDS]
+/ip firewall address-list
+:do { add address="IP" list=RDS } on-error={}
