@@ -26,6 +26,11 @@ if exists iprange && [[ ${OPTIMIZE_CIDR:-yes} != no ]]; then
   DO_OPTIMIZE_CIDR=yes
 fi
 
+if [[ ! -d $(dirname "$IP_COUNTRIES") || ! -d $(dirname "$IP_COUNTRIES_RESTORE") ]]; then
+  echo >&2 "Error: missing directory(s): $(dirname "$IP_COUNTRIES" "$IP_COUNTRIES_RESTORE"|sort -u)"
+  exit 1
+fi
+
 if [[ ! -d $(dirname "$IP_BLACKLIST") || ! -d $(dirname "$IP_BLACKLIST_RESTORE") ]]; then
   echo >&2 "Error: missing directory(s): $(dirname "$IP_BLACKLIST" "$IP_BLACKLIST_RESTORE"|sort -u)"
   exit 1
@@ -75,16 +80,16 @@ do
 done
 
 # sort -nu does not work as expected
-sed -r -e '/^(0\.0\.0\.0|10\.|127\.|172\.1[6-9]\.|172\.2[0-9]\.|172\.3[0-1]\.|192\.168\.|22[4-9]\.|23[0-9]\.)/d' "$IP_COUNTRIES_TMP"|sort -n|sort -mu >| "$IP_BLACKLIST"
+sed -r -e '/^(0\.0\.0\.0|10\.|127\.|172\.1[6-9]\.|172\.2[0-9]\.|172\.3[0-1]\.|192\.168\.|22[4-9]\.|23[0-9]\.)/d' "$IP_COUNTRIES_TMP"|sort -n|sort -mu >| "$IP_COUNTRIES"
 if [[ ${DO_OPTIMIZE_CIDR} == yes ]]; then
   if [[ ${VERBOSE:-no} == yes ]]; then
-    echo -e "\\nAddresses before CIDR optimization: $(wc -l "$IP_BLACKLIST" | cut -d' ' -f1)"
+    echo -e "\\nAddresses before CIDR optimization: $(wc -l "$IP_COUNTRIES" | cut -d' ' -f1)"
   fi
-  < "$IP_BLACKLIST" iprange --optimize - > "$IP_COUNTRIES_TMP" 2>/dev/null
+  < "$IP_COUNTRIES" iprange --optimize - > "$IP_COUNTRIES_TMP" 2>/dev/null
   if [[ ${VERBOSE:-no} == yes ]]; then
     echo "Addresses after CIDR optimization:  $(wc -l "$IP_COUNTRIES_TMP" | cut -d' ' -f1)"
   fi
-  cp "$IP_COUNTRIES_TMP" "$IP_BLACKLIST"
+  cp "$IP_COUNTRIES_TMP" "$IP_COUNTRIES"
 fi
 
 rm -f "$IP_COUNTRIES_TMP"
