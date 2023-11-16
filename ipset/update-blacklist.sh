@@ -63,6 +63,20 @@ if ! ipset list -n|command grep -q "$IPSET_BLACKLIST_NAME"; then
 fi
 
 # create the iptables binding if needed (or abort if does not exists and FORCE=no)
+if ! iptables -nvL INPUT|command grep -q "match-set $IPSET_COUNTRIES_NAME"; then
+  # we may also have assumed that INPUT rule n°1 is about packets statistics (traffic monitoring)
+  if [[ ${FORCE:-no} != yes ]]; then
+    echo >&2 "Error: iptables does not have the needed ipset INPUT rule, add it using:"
+    echo >&2 "# iptables -I INPUT ${IPTABLES_IPSET_RULE_NUMBER:-1} -m set --match-set $IPSET_COUNTRIES_NAME src -j DROP"
+    exit 1
+  fi
+  if ! iptables -I INPUT "${IPTABLES_IPSET_RULE_NUMBER:-1}" -m set --match-set "$IPSET_COUNTRIES_NAME" src -j DROP; then
+    echo >&2 "Error: while adding the --match-set ipset rule to iptables"
+    exit 1
+  fi
+fi
+
+# create the iptables binding if needed (or abort if does not exists and FORCE=no)
 if ! iptables -nvL INPUT|command grep -q "match-set $IPSET_BLACKLIST_NAME"; then
   # we may also have assumed that INPUT rule n°1 is about packets statistics (traffic monitoring)
   if [[ ${FORCE:-no} != yes ]]; then
@@ -139,7 +153,7 @@ fi
 rm -f "$IP_BLACKLIST_TMP"
 
 # family = inet for IPv4 only
-cat >| "$IP_BLACKLIST_RESTORE" <<EOF
+cat >| "$IP_COUNTRIES_RESTORE" <<EOF
 create $IPSET_TMP_COUNTRIES_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
 create $IPSET_BLACKLIST_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
 EOF
@@ -147,10 +161,10 @@ EOF
 # can be IPv4 including netmask notation
 # IPv6 ? -e "s/^([0-9a-f:./]+).*/add $IPSET_TMP_COUNTRIES_NAME \1/p" \ IPv6
 sed -rn -e '/^#|^$/d' \
-  -e "s/^([0-9./]+).*/add $IPSET_TMP_COUNTRIES_NAME \\1/p" "$IP_BLACKLIST" >> "$IP_BLACKLIST_RESTORE"
+  -e "s/^([0-9./]+).*/add $IPSET_TMP_COUNTRIES_NAME \\1/p" "$IP_BLACKLIST" >> "$IP_COUNTRIES_RESTORE"
 
-cat >> "$IP_BLACKLIST_RESTORE" <<EOF
-swap $IPSET_BLACKLIST_NAME $IPSET_TMP_COUNTRIES_NAME
+cat >> "$IP_COUNTRIES_RESTORE" <<EOF
+swap $IPSET_COUNTRIES_NAME $IPSET_TMP_COUNTRIES_NAME
 destroy $IPSET_TMP_COUNTRIES_NAME
 EOF
 
