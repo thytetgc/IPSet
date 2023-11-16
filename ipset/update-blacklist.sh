@@ -37,6 +37,19 @@ if [[ ! -d $(dirname "$IP_BLACKLIST") || ! -d $(dirname "$IP_BLACKLIST_RESTORE")
 fi
 
 # create the ipset if needed (or abort if does not exists and FORCE=no)
+if ! ipset list -n|command grep -q "$IPSET_COUNTRIES_NAME"; then
+  if [[ ${FORCE:-no} != yes ]]; then
+    echo >&2 "Error: ipset does not exist yet, add it using:"
+    echo >&2 "# ipset create $IPSET_COUNTRIES_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}"
+    exit 1
+  fi
+  if ! ipset create "$IPSET_COUNTRIES_NAME" -exist hash:net family inet hashsize "${HASHSIZE:-16384}" maxelem "${MAXELEM:-65536}"; then
+    echo >&2 "Error: while creating the initial ipset"
+    exit 1
+  fi
+fi
+
+# create the ipset if needed (or abort if does not exists and FORCE=no)
 if ! ipset list -n|command grep -q "$IPSET_BLACKLIST_NAME"; then
   if [[ ${FORCE:-no} != yes ]]; then
     echo >&2 "Error: ipset does not exist yet, add it using:"
@@ -124,6 +137,22 @@ if [[ ${DO_OPTIMIZE_CIDR} == yes ]]; then
 fi
 
 rm -f "$IP_BLACKLIST_TMP"
+
+# family = inet for IPv4 only
+cat >| "$IP_BLACKLIST_RESTORE" <<EOF
+create $IPSET_TMP_COUNTRIES_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
+create $IPSET_BLACKLIST_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
+EOF
+
+# can be IPv4 including netmask notation
+# IPv6 ? -e "s/^([0-9a-f:./]+).*/add $IPSET_TMP_COUNTRIES_NAME \1/p" \ IPv6
+sed -rn -e '/^#|^$/d' \
+  -e "s/^([0-9./]+).*/add $IPSET_TMP_COUNTRIES_NAME \\1/p" "$IP_BLACKLIST" >> "$IP_BLACKLIST_RESTORE"
+
+cat >> "$IP_BLACKLIST_RESTORE" <<EOF
+swap $IPSET_BLACKLIST_NAME $IPSET_TMP_COUNTRIES_NAME
+destroy $IPSET_TMP_COUNTRIES_NAME
+EOF
 
 # family = inet for IPv4 only
 cat >| "$IP_BLACKLIST_RESTORE" <<EOF
