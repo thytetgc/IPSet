@@ -21,6 +21,7 @@ to generate the `/etc/ipset-blacklist/ip-blacklist.restore` and `/etc/ipset-blac
 ## iptables filter rule
 
 ```sh
+echo '
 # Enable blacklists
 ipset restore < /etc/ipset-blacklist/ip-blacklist.restore
 iptables -I INPUT 1 -m set --match-set blacklist src -j DROP
@@ -28,6 +29,7 @@ iptables -I INPUT 1 -m set --match-set blacklist src -j DROP
 # Enable countries
 ipset restore < /etc/ipset-blacklist/ip-countrie.restore
 iptables -I INPUT 1 -m set --match-set countrie src -j DROP
+' >> /etc/rc.local
 ```
 
 Make sure to run this snippet in a firewall script or just insert it to `/etc/rc.local`.
