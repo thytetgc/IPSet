@@ -191,7 +191,7 @@ EOF
 ipset -file  "$IP_COUNTRIES_RESTORE" restore
 if [[ ${VERBOSE:-no} == yes ]]; then
   echo
-  echo "Endereços na lista negra encontrados: $(wc -l "$IP_COUNTRIES" | cut -d' ' -f1)"
+  echo "Endereços de países encontrados: $(wc -l "$IP_COUNTRIES" | cut -d' ' -f1)"
 fi
 ##########################
 ipset -file  "$IP_BLACKLIST_RESTORE" restore
