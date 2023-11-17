@@ -1,16 +1,16 @@
 ## Quick start for Debian/Ubuntu based installations
 
-1. `wget -O /usr/local/sbin/update-blacklist.sh https://raw.githubusercontent.com/trick77/ipset-blacklist/master/update-blacklist.sh`
+1. `wget -O /usr/local/sbin/update-blacklist.sh https://raw.githubusercontent.com/thytetgc/IPSet/main/ipset/update-blacklist.sh`
 2. `chmod +x /usr/local/sbin/update-blacklist.sh`
-3. `mkdir -p /etc/ipset-blacklist ; wget -O /etc/ipset-blacklist/ipset-blacklist.conf https://raw.githubusercontent.com/trick77/ipset-blacklist/master/ipset-blacklist.conf`
+3. `mkdir -p /etc/ipset-blacklist ; wget -O /etc/ipset-blacklist/ipset-blacklist.conf https://raw.githubusercontent.com/thytetgc/IPSet/main/ipset/ipset-blacklist.conf`
 4. Modify `ipset-blacklist.conf` according to your needs. Per default, the blacklisted IP addresses will be saved to `/etc/ipset-blacklist/ip-blacklist.restore`
-5. `apt-get install ipset`
+5. `apt-get install ipset` or `yum install ipset`
 6. Create the ipset blacklist and insert it into your iptables input filter (see below). After proper testing, make sure to persist it in your firewall script or similar or the rules will be lost after the next reboot.
 7. Auto-update the blacklist using a cron job
 
 ## First run, create the list
 
-to generate the `/etc/ipset-blacklist/ip-blacklist.restore`:
+to generate the `/etc/ipset-blacklist/ip-blacklist.restore` and `/etc/ipset-blacklist/ip-countrie.restore`:
 
 ```sh
 /usr/local/sbin/update-blacklist.sh /etc/ipset-blacklist/ipset-blacklist.conf
@@ -22,6 +22,10 @@ to generate the `/etc/ipset-blacklist/ip-blacklist.restore`:
 # Enable blacklists
 ipset restore < /etc/ipset-blacklist/ip-blacklist.restore
 iptables -I INPUT 1 -m set --match-set blacklist src -j DROP
+
+# Enable countries
+ipset restore < /etc/ipset-blacklist/ip-countrie.restore
+iptables -I INPUT 1 -m set --match-set countrie src -j DROP
 ```
 
 Make sure to run this snippet in a firewall script or just insert it to `/etc/rc.local`.
@@ -45,9 +49,10 @@ drfalken@wopr:~# iptables -L INPUT -v --line-numbers
 Chain INPUT (policy DROP 60 packets, 17733 bytes)
 num   pkts bytes target            prot opt in  out source   destination
 1       15  1349 DROP              all  --  any any anywhere anywhere     match-set blacklist src
-2        0     0 fail2ban-vsftpd   tcp  --  any any anywhere anywhere     multiport dports ftp,ftp-data,ftps,ftps-data
-3      912 69233 fail2ban-ssh-ddos tcp  --  any any anywhere anywhere     multiport dports ssh
-4      912 69233 fail2ban-ssh      tcp  --  any any anywhere anywhere     multiport dports ssh
+2       10  1029 DROP              all  --  any any anywhere anywhere     match-set countrie src
+3        0     0 fail2ban-vsftpd   tcp  --  any any anywhere anywhere     multiport dports ftp,ftp-data,ftps,ftps-data
+4      912 69233 fail2ban-ssh-ddos tcp  --  any any anywhere anywhere     multiport dports ssh
+5      912 69233 fail2ban-ssh      tcp  --  any any anywhere anywhere     multiport dports ssh
 ```
 
 Since iptable rules are parsed sequentally, the ipset-blacklist is most effective if it's the **topmost** rule in iptable's INPUT chain. However, restarting fail2ban usually leads to a situation, where fail2ban inserts its rules above our blacklist drop rule. To prevent this from happening we have to tell fail2ban to insert its rules at the 2nd position. Since the iptables-multiport action is the default ban-action we have to add a file to `/etc/fail2ban/action.d`:
@@ -70,8 +75,8 @@ Edit the BLACKLIST array in /etc/ipset-blacklist/ipset-blacklist.conf to add or 
 ```sh
 BLACKLISTS=(
 "http://www.mysite.me/files/mycustomblacklist.txt" # Your personal blacklist
-"http://www.projecthoneypot.org/list_of_ips.php?t=d&rss=1" # Project Honey Pot Directory of Dictionary Attacker IPs
-# I don't want this: "http://www.openbl.org/lists/base.txt"  # OpenBL.org 30 day List
+"http://www.projecthoneypot.org/list_of_ips.php?t=d&rss=1"                   # Project Honey Pot Directory of Dictionary Attacker IPs
+# I don't want this: "http://www.openbl.org/lists/base.txt"                  # OpenBL.org 30 day List
 )
 ```
 
