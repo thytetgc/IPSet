@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 #
-# usage update-blacklist.sh <configuration file>
-# eg: update-blacklist.sh /etc/ipset-blacklist/ipset-blacklist.conf
+# Use update-blacklist.sh <configuration file>
+# Ex: update-blacklist.sh /etc/ipset-blacklist/ipset-blacklist.conf
 #
 function exists() { command -v "$1" >/dev/null 2>&1 ; }
 
 if [[ -z "$1" ]]; then
-  echo "Error: please specify a configuration file, e.g. $0 /etc/ipset-blacklist/ipset-blacklist.conf"
+  echo "Erro: especifique um arquivo de configuração, por exemplo. $0 /etc/ipset-blacklist/ipset-blacklist.conf"
   exit 1
 fi
 
 # shellcheck source=ipset-blacklist.conf
 if ! source "$1"; then
-  echo "Error: can't load configuration file $1"
+  echo "Erro: não é possível carregar o arquivo de configuração $1"
   exit 1
 fi
 
 if ! exists curl && exists egrep && exists grep && exists ipset && exists iptables && exists sed && exists sort && exists wc ; then
-  echo >&2 "Error: searching PATH fails to find executables among: curl egrep grep ipset iptables sed sort wc"
+  echo >&2 "Erro: a pesquisa de PATH não consegue encontrar executáveis entre: curl egrep grep ipset iptables sed sort wc"
   exit 1
 fi
 
@@ -26,6 +26,7 @@ if exists iprange && [[ ${OPTIMIZE_CIDR:-yes} != no ]]; then
   DO_OPTIMIZE_CIDR=yes
 fi
 
+############################################################################################################
 if [[ ! -d $(dirname "$IP_COUNTRIES") || ! -d $(dirname "$IP_COUNTRIES_RESTORE") ]]; then
   echo >&2 "Error: missing directory(s): $(dirname "$IP_COUNTRIES" "$IP_COUNTRIES_RESTORE"|sort -u)"
   exit 1
@@ -36,6 +37,7 @@ if [[ ! -d $(dirname "$IP_BLACKLIST") || ! -d $(dirname "$IP_BLACKLIST_RESTORE")
   exit 1
 fi
 
+############################################################################################################
 # create the ipset if needed (or abort if does not exists and FORCE=no)
 if ! ipset list -n|command grep -q "$IPSET_COUNTRIES_NAME"; then
   if [[ ${FORCE:-no} != yes ]]; then
@@ -62,6 +64,7 @@ if ! ipset list -n|command grep -q "$IPSET_BLACKLIST_NAME"; then
   fi
 fi
 
+############################################################################################################
 # create the iptables binding if needed (or abort if does not exists and FORCE=no)
 if ! iptables -nvL INPUT|command grep -q "match-set $IPSET_COUNTRIES_NAME"; then
   # we may also have assumed that INPUT rule n°1 is about packets statistics (traffic monitoring)
@@ -90,6 +93,7 @@ if ! iptables -nvL INPUT|command grep -q "match-set $IPSET_BLACKLIST_NAME"; then
   fi
 fi
 
+############################################################################################################
 IP_COUNTRIES_TMP=$(mktemp)
 for i in "${COUNTRIES[@]}"
 do
@@ -152,16 +156,17 @@ fi
 
 rm -f "$IP_BLACKLIST_TMP"
 
+############################################################################################################
 # family = inet for IPv4 only
 cat >| "$IP_COUNTRIES_RESTORE" <<EOF
 create $IPSET_TMP_COUNTRIES_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
-create $IPSET_BLACKLIST_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
+create $IPSET_COUNTRIES_NAME -exist hash:net family inet hashsize ${HASHSIZE:-16384} maxelem ${MAXELEM:-65536}
 EOF
 
 # can be IPv4 including netmask notation
 # IPv6 ? -e "s/^([0-9a-f:./]+).*/add $IPSET_TMP_COUNTRIES_NAME \1/p" \ IPv6
 sed -rn -e '/^#|^$/d' \
-  -e "s/^([0-9./]+).*/add $IPSET_TMP_COUNTRIES_NAME \\1/p" "$IP_BLACKLIST" >> "$IP_COUNTRIES_RESTORE"
+  -e "s/^([0-9./]+).*/add $IPSET_TMP_COUNTRIES_NAME \\1/p" "$IP_COUNTRIES" >> "$IP_COUNTRIES_RESTORE"
 
 cat >> "$IP_COUNTRIES_RESTORE" <<EOF
 swap $IPSET_COUNTRIES_NAME $IPSET_TMP_COUNTRIES_NAME
@@ -183,6 +188,14 @@ cat >> "$IP_BLACKLIST_RESTORE" <<EOF
 swap $IPSET_BLACKLIST_NAME $IPSET_TMP_BLACKLIST_NAME
 destroy $IPSET_TMP_BLACKLIST_NAME
 EOF
+
+############################################################################################################
+ipset -file  "$IP_COUNTRIES_RESTORE" restore
+
+if [[ ${VERBOSE:-no} == yes ]]; then
+  echo
+  echo "Blacklisted addresses found: $(wc -l "$IP_COUNTRIES" | cut -d' ' -f1)"
+fi
 
 ipset -file  "$IP_BLACKLIST_RESTORE" restore
 
