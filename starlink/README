@@ -1,0 +1,18 @@
+P público
+A política de IP público Starlink é uma configuração opcional disponível para clientes Priority, Mobile Priority e Maritime.
+
+Um IP público pode ser acessado de qualquer dispositivo na Internet e é atribuído a clientes de rede Starlink usando DHCP. Mover o Starlink para outro local pode fazer com que o IP público mude. A opção de IP público pode ser ativada no painel da conta.
+
+Alocação de IP
+O Starlink alocará:
+
+Um endereço IPv4 público para a rede de longa distância (WAN) do cliente, provisionado por meio do DHCP (Dynamic Host Configuration Protocol versão 6) para roteadores/firewalls que usam IPv4.
+Um prefixo IPv6/64 para a WAN (rede de longa distância) do cliente, provisionado por meio da Configuração Automática de Endereço Sem Estado (SLAAC) para roteadores/firewalls que usam IPv6.
+Um prefixo IPv6 /56 para a rede local (LAN) do cliente, provisionado para roteadores capazes de emitir uma solicitação DHCPv6-PD.
+O IPv6 é compatível com todos os roteadores Starlink.
+
+👍
+Starlink é uma rede nativa IPv6. O uso do IPv6 é mais flexível e preparado para o futuro.
+
+Geolocalização
+Todas as sub-redes IP Starlink e mapeamento de geolocalização podem ser encontradas no banco de dados Starlink GeoIP [https://geoip.starlinkisp.net/feed.csv]
