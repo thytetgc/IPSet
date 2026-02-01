@@ -1,4 +1,4 @@
-/log info "Carregar RDS [01-10-2025] IPV4 address list"
+/log info "Carregar RDS [01-02-2026] IPV4 address list"
 /ip firewall address-list remove [/ip firewall address-list find list=RDS]
 /ip firewall address-list
 :do { add address=1.0.133.100/32 list=RDS dynamic=yes timeout=31d00:00:00 } on-error={}
